@@ -1,0 +1,41 @@
+name: Build TENSION
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            extra: ""
+          - name: macOS
+            os: macos-latest
+            extra: -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64"
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.extra }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel 4
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p dist
+          cp -R build/Tension_artefacts/Release/VST3/*.vst3 dist/
+          if [ -d build/Tension_artefacts/Release/AU ]; then cp -R build/Tension_artefacts/Release/AU/*.component dist/; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TENSION-${{ matrix.name }}
+          path: dist
